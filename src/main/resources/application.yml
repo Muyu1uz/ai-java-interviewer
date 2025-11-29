@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: AiJavaInterviewer
+  profiles:
+    active: local
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://pgm-uf6sb09403i2iu78eo.rwlb.rds.aliyuncs.com:5432/ai-java-interviewer
+    username: muyulu
+    password: Miaoyalei111
+  ai:
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        max-document-batch-size: 10000
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+# springdoc-openapi
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.muyulu.aijavainterviewer.controller
+# knife 4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
