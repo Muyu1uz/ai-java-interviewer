@@ -1,10 +1,9 @@
-package com.muyulu.aijavainterviewer.Assistant;
+package com.muyulu.aijavainterviewer.assistant;
 
 import com.muyulu.aijavainterviewer.constant.SystemConstant;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.PromptChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
@@ -41,7 +40,7 @@ public class InterViewAssistant {
                 .defaultSystem(SystemConstant.SYSTEM_PROMPT)
                 .defaultAdvisors(
                         new SimpleLoggerAdvisor(),
-                        PromptChatMemoryAdvisor.builder(chatMemory).build()
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
     }

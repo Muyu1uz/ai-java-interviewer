@@ -1,12 +1,9 @@
-package com.muyulu.aijavainterviewer.Assistant;
+package com.muyulu.aijavainterviewer.assistant;
 
-import com.github.xiaoymin.knife4j.core.util.Assert;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class InterViewAssistantTest {
