@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @TableName("resumes")
 public class Resume {
@@ -26,8 +28,8 @@ public class Resume {
     private String internshipExperience;
 
     @TableField("create_time")
-    private String createTime;
+    private LocalDateTime createTime;
 
     @TableField("update_time")
-    private String updateTime;
+    private LocalDateTime updateTime;
 }

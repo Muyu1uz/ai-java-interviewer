@@ -14,6 +14,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -22,6 +23,7 @@ import static com.muyulu.aijavainterviewer.constant.ChatMemoryConstant.CHAT_MEMO
 
 @Slf4j
 @Component
+@Scope("prototype")
 public class InterViewAssistant {
 
     private final ChatClient chatClient;
