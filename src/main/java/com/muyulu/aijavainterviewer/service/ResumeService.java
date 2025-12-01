@@ -3,10 +3,8 @@ package com.muyulu.aijavainterviewer.service;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
+import com.muyulu.aijavainterviewer.model.vo.ResumeVo;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.File;
-import java.io.IOException;
 
 public interface ResumeService extends IService<Resume> {
 
@@ -22,5 +20,18 @@ public interface ResumeService extends IService<Resume> {
      * @param resumeContent 简历内容
      * @return 分析后的Resume对象
      */
-    Resume getAnalyzedResume(String resumeContent) throws GraphRunnerException;
+    ResumeVo getAnalyzedResume(String resumeContent) throws GraphRunnerException;
+
+    /**
+     * 根据resumeId获取简历
+     * @param resumeId
+     * @return
+     */
+    Resume getByResumeId(String resumeId);
+
+    /**
+     * 根据resumeId更新简历
+     * @param resume
+     */
+    void updateByResumeId(Resume resume);
 }

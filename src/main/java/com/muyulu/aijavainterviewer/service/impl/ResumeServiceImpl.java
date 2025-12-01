@@ -3,9 +3,12 @@ package com.muyulu.aijavainterviewer.service.impl;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muyulu.aijavainterviewer.assistant.ResumeAgent;
 import com.muyulu.aijavainterviewer.mapper.ResumeMapper;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
+import com.muyulu.aijavainterviewer.model.vo.ResumeVo;
 import com.muyulu.aijavainterviewer.service.ResumeService;
 import com.muyulu.aijavainterviewer.tool.FileToStringConverterTool;
 import jakarta.annotation.Resource;
@@ -75,9 +78,21 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
     }
 
     @Override
-    public Resume getAnalyzedResume(String resumeContent) throws GraphRunnerException {
+    public ResumeVo getAnalyzedResume(String resumeContent) throws GraphRunnerException {
         String resultJson = resumeAgent.analyzeResume(resumeContent);
-        return JSONUtil.toBean(resultJson, Resume.class);
+        ResumeVo resumeVo = null;
+        resumeVo = JSONUtil.toBean(resultJson, ResumeVo.class);
+        return resumeVo;
+    }
+
+    @Override
+    public Resume getByResumeId(String resumeId) {
+        return this.lambdaQuery().eq(Resume::getResumeId, resumeId).one();
+    }
+
+    @Override
+    public void updateByResumeId(Resume resume) {
+        this.lambdaUpdate().eq(Resume::getResumeId, resume.getResumeId()).update(resume);
     }
 
     private String getFileExtension(String filename) {
