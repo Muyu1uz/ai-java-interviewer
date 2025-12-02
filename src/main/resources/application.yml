@@ -43,3 +43,8 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+# JWT配置
+jwt:
+  secret: YourSuperSecretKeyForJWT2025MustBeAtLeast256BitsLongForHS256Algorithm
+  expiration: 86400  # 24小时,单位:秒

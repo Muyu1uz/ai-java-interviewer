@@ -4,6 +4,7 @@ import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.vo.ResumeVo;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ResumeService extends IService<Resume> {
@@ -40,4 +41,11 @@ public interface ResumeService extends IService<Resume> {
      * @param resume resume entity that has just been persisted
      */
     void cacheResume(Resume resume);
+
+    /**
+     * 检查用户是否已上传简历
+     * @param request
+     * @return
+     */
+    boolean getResume(HttpServletRequest request);
 }

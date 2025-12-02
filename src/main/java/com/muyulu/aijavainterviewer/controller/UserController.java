@@ -3,6 +3,7 @@ package com.muyulu.aijavainterviewer.controller;
 import com.muyulu.aijavainterviewer.model.dto.UserDto;
 import com.muyulu.aijavainterviewer.model.dto.UserLoginDto;
 import com.muyulu.aijavainterviewer.model.entity.User;
+import com.muyulu.aijavainterviewer.model.vo.UserLoginVo;
 import com.muyulu.aijavainterviewer.service.UserService;
 import com.muyulu.aijavainterviewer.service.impl.UserServiceImpl;
 import jakarta.annotation.Resource;
@@ -23,7 +24,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public User login(@Valid @RequestBody UserLoginDto userDto, HttpServletRequest request) {
+    public UserLoginVo login(@Valid @RequestBody UserLoginDto userDto, HttpServletRequest request) {
         return userService.login(userDto, request);
     }
 }

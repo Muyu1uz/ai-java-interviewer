@@ -6,15 +6,20 @@ import com.muyulu.aijavainterviewer.mapper.UserMapper;
 import com.muyulu.aijavainterviewer.model.dto.UserDto;
 import com.muyulu.aijavainterviewer.model.dto.UserLoginDto;
 import com.muyulu.aijavainterviewer.model.entity.User;
+import com.muyulu.aijavainterviewer.model.vo.UserLoginVo;
 import com.muyulu.aijavainterviewer.service.UserService;
+import com.muyulu.aijavainterviewer.util.JwtUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.logging.Log;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static com.muyulu.aijavainterviewer.constant.UserConstant.USER_LOGIN_STATE;
 
+@Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService  {
 
@@ -22,6 +27,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private PasswordEncoder passwordEncoder;
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private JwtUtil jwtUtil;
 
     public User register(UserDto request) {
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<User>()
@@ -37,7 +44,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return user;
     }
 
-    public User login(UserLoginDto userDto, HttpServletRequest request) {
+    public UserLoginVo login(UserLoginDto userDto, HttpServletRequest request) {
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<User>()
                 .eq(User::getUserAccount, userDto.userAccount());
 
@@ -48,9 +55,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (!passwordEncoder.matches(userDto.password(), user.getPassword())) {
             throw new IllegalArgumentException("账号/密码错误");
         }
-        //保存用户登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE,user);
-        return user;
+        
+        // 生成 JWT Token
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
+        
+        // 构造返回对象
+        UserLoginVo loginVo = new UserLoginVo();
+        loginVo.setId(user.getId());
+        loginVo.setUsername(user.getUsername());
+        loginVo.setUserAccount(user.getUserAccount());
+        loginVo.setToken(token);
+
+        log.info("用户登录成功，用户ID: {}", user.getId());
+        return loginVo;
     }
 
     /**
@@ -59,12 +76,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return
      */
     public User getLoginUser(HttpServletRequest request) {
-        //判断是否登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if(currentUser == null || currentUser.getId() == null){
+        // 从请求属性中获取用户ID(由 JWT 过滤器设置)
+        Object userIdObj = request.getAttribute("userId");
+        if (userIdObj == null) {
             throw new IllegalArgumentException("用户未登录");
         }
-        return this.getById(currentUser.getId());
+        
+        Long userId = (Long) userIdObj;
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        
+        return user;
     }
 }

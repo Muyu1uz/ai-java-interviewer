@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.muyulu.aijavainterviewer.model.dto.UserDto;
 import com.muyulu.aijavainterviewer.model.dto.UserLoginDto;
 import com.muyulu.aijavainterviewer.model.entity.User;
+import com.muyulu.aijavainterviewer.model.vo.UserLoginVo;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,7 @@ public interface UserService extends IService<User> {
      * @param request
      * @return
      */
-    public User login(UserLoginDto userDto, HttpServletRequest request);
+    public UserLoginVo login(UserLoginDto userDto, HttpServletRequest request);
 
     /**
      * 获取当前登录用户

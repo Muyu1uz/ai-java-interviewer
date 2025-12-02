@@ -2,6 +2,7 @@ package com.muyulu.aijavainterviewer.controller;
 
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.google.common.hash.BloomFilter;
+import com.muyulu.aijavainterviewer.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.model.dto.ResumeAnalyzeRequest;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.entity.User;
@@ -29,6 +30,7 @@ public class ResumeController {
 
     @PostMapping("/create")
     @Transactional
+    @RequireLogin
     public ResponseEntity<ResumeVo> create(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws GraphRunnerException {
         //转换简历文件为文本内容
         String content = resumeService.file2Content(file);
@@ -39,7 +41,11 @@ public class ResumeController {
         BeanUtils.copyProperties(resumeVo, resume);
         //获取当前用户
         User currentUser = userService.getLoginUser(request);
-        resume.setResumeId(file.getOriginalFilename() + "_" + currentUser.getId());
+        String resumeId = file.getOriginalFilename() + "_" + currentUser.getId();
+        //更新用户简历id
+        currentUser.setResumeId(resumeId);
+        userService.updateById(currentUser);
+        resume.setResumeId(resumeId);
         Resume oldResume = resumeService.getByResumeId(resume.getResumeId());
         if(oldResume != null){
             resumeService.updateByResumeId(resume);
@@ -53,6 +59,16 @@ public class ResumeController {
             resumeService.save(resume);
         }
         return ResponseEntity.ok(resumeVo);
+    }
+
+    /**
+     * 检查当前用户是否已经上传简历
+     */
+    @GetMapping("/check")
+    @RequireLogin
+    public ResponseEntity<Boolean> checkResumeUploaded(HttpServletRequest request) {
+        boolean resume = resumeService.getResume(request);
+        return ResponseEntity.ok(resume);
     }
 
 }
