@@ -3,8 +3,9 @@ package com.muyulu.aijavainterviewer.service.impl;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.hash.BloomFilter;
 import com.muyulu.aijavainterviewer.assistant.ResumeAgent;
 import com.muyulu.aijavainterviewer.mapper.ResumeMapper;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
@@ -13,8 +14,11 @@ import com.muyulu.aijavainterviewer.service.ResumeService;
 import com.muyulu.aijavainterviewer.tool.FileToStringConverterTool;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -24,6 +28,12 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
     private ResumeAgent resumeAgent;
     @Resource
     private FileToStringConverterTool fileToStringConverterTool;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+    @Resource
+    private ObjectMapper objectMapper;
+    @Resource
+    private BloomFilter<String> resumeBloomFilter;
 
     @Override
     public String file2Content(MultipartFile multipartFile) {
@@ -87,13 +97,60 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
 
     @Override
     public Resume getByResumeId(String resumeId) {
+
+        //先从缓存中获取
+        Map<Object, Object> resumeMap = redisTemplate.opsForHash().entries(resumeId);
+        if (resumeMap != null && !resumeMap.isEmpty()) {
+            try {
+                return objectMapper.convertValue(resumeMap, Resume.class);
+            } catch (IllegalArgumentException ex) {
+                log.error("Failed to convert cached resume {}", resumeId, ex);
+            }
+        }
+
+        //通过布隆过滤器检查数据库中有没有这个数据
+        if (!resumeBloomFilter.mightContain(resumeId)) {
+            log.debug("Bloom filter miss for resumeId={}, short-circuit DB lookup", resumeId);
+            return null;
+        }
+
+        //如果有，再从数据库中获取
         return this.lambdaQuery().eq(Resume::getResumeId, resumeId).one();
     }
 
     @Override
     public void updateByResumeId(Resume resume) {
+        //删除缓存
+        redisTemplate.delete(resume.getResumeId());
+        //更新数据库
         this.lambdaUpdate().eq(Resume::getResumeId, resume.getResumeId()).update(resume);
+        resumeBloomFilter.put(resume.getResumeId());
+        //延时双删
+        new Thread(() -> {
+            try {
+                Thread.sleep(500);
+                redisTemplate.delete(resume.getResumeId());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+
     }
+
+    @Override
+    public void cacheResume(Resume resume) {
+        if (resume == null || resume.getResumeId() == null) {
+            log.warn("Resume为空");
+            return;
+        }
+        try {
+            Map<String, Object> resumeMap = objectMapper.convertValue(resume, new TypeReference<>() {});
+            redisTemplate.opsForHash().putAll(resume.getResumeId(), resumeMap);
+        } catch (IllegalArgumentException ex) {
+            log.error("Failed to cache resume {}", resume.getResumeId(), ex);
+        }
+    }
+
 
     private String getFileExtension(String filename) {
         int lastDotIndex = filename.lastIndexOf('.');

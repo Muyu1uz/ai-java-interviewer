@@ -34,4 +34,10 @@ public interface ResumeService extends IService<Resume> {
      * @param resume
      */
     void updateByResumeId(Resume resume);
+
+    /**
+     * Cache resume data into Redis using the configured hash structure.
+     * @param resume resume entity that has just been persisted
+     */
+    void cacheResume(Resume resume);
 }

@@ -1,6 +1,7 @@
 package com.muyulu.aijavainterviewer.controller;
 
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.google.common.hash.BloomFilter;
 import com.muyulu.aijavainterviewer.model.dto.ResumeAnalyzeRequest;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.entity.User;
@@ -11,6 +12,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,8 +24,11 @@ public class ResumeController {
     private ResumeService resumeService;
     @Resource
     private UserService userService;
+    @Resource
+    private BloomFilter<String> resumeBloomFilter;
 
     @PostMapping("/create")
+    @Transactional
     public ResponseEntity<ResumeVo> create(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws GraphRunnerException {
         //转换简历文件为文本内容
         String content = resumeService.file2Content(file);
@@ -40,8 +45,14 @@ public class ResumeController {
             resumeService.updateByResumeId(resume);
         }
         else{
+            //存入缓存
+            resumeService.cacheResume(resume);
+            //更新布隆过滤器
+            resumeBloomFilter.put(resume.getResumeId());
+            //存入数据库
             resumeService.save(resume);
         }
         return ResponseEntity.ok(resumeVo);
     }
+
 }
