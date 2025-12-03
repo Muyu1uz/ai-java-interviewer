@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.BloomFilter;
 import com.muyulu.aijavainterviewer.assistant.ResumeAgent;
+import com.muyulu.aijavainterviewer.exception.ResumeException;
 import com.muyulu.aijavainterviewer.mapper.ResumeMapper;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.entity.User;
@@ -56,7 +57,7 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
 
         String filename = resumeFile.getOriginalFilename();
         if (filename == null) {
-            throw new IllegalArgumentException("文件名不能为空");
+            throw ResumeException.uploadFailed("文件名不能为空");
         }
 
         String extension = getFileExtension(filename).toLowerCase();
@@ -77,7 +78,7 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
                 // 图片文件直接使用OCR
                 return extractWithType(resumeFile, "OCR");
             }
-            default -> throw new IllegalArgumentException("不支持的文件格式: " + extension);
+            default -> throw ResumeException.uploadFailed("不支持的文件格式: " + extension);
         }
     }
     private String extractWithType(MultipartFile file, String extractionType) {
@@ -88,7 +89,7 @@ public class ResumeServiceImpl extends ServiceImpl<ResumeMapper, Resume> impleme
         String content = fileToStringConverterTool.apply(request);
 
         if (content.startsWith("文件转换失败")) {
-            throw new RuntimeException("文件提取失败: " + content);
+            throw ResumeException.parseFailed(content);
         }
 
         return content;

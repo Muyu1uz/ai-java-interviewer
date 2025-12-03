@@ -5,15 +5,21 @@ spring:
     active: local
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://pgm-uf6sb09403i2iu78eo.rwlb.rds.aliyuncs.com:5432/ai-java-interviewer
-    username: muyulu
-    password: Miaoyalei111
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: root
   ai:
     vectorstore:
       pgvector:
         index-type: HNSW
         distance-type: COSINE_DISTANCE
+        dimensions: 1536
         max-document-batch-size: 10000
+    dashscope:
+      embedding:
+        options:
+          model: text-embedding-v3
+        dimensions: 1536
   # redis
   data:
     redis:
@@ -48,3 +54,14 @@ knife4j:
 jwt:
   secret: YourSuperSecretKeyForJWT2025MustBeAtLeast256BitsLongForHS256Algorithm
   expiration: 86400  # 24小时,单位:秒
+
+# RAG配置
+rag:
+  document:
+    auto-load: true          # 启动时自动加载文档
+    force-reload: false      # 是否强制重新加载(即使已有数据)
+    chunk-size: 800          # 文档分块大小(字符数)
+    chunk-overlap: 200       # 分块重叠大小(字符数)
+  retrieval:
+    top-k: 5                 # 检索返回的相关文档数量
+    similarity-threshold: 0.6 # 相似度阈值

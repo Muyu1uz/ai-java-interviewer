@@ -6,13 +6,13 @@ import com.muyulu.aijavainterviewer.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.model.dto.ResumeAnalyzeRequest;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.entity.User;
+import com.muyulu.aijavainterviewer.common.Result;
 import com.muyulu.aijavainterviewer.model.vo.ResumeVo;
 import com.muyulu.aijavainterviewer.service.ResumeService;
 import com.muyulu.aijavainterviewer.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
-import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,7 +31,7 @@ public class ResumeController {
     @PostMapping("/create")
     @Transactional
     @RequireLogin
-    public ResponseEntity<ResumeVo> create(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws GraphRunnerException {
+    public Result<ResumeVo> create(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws GraphRunnerException {
         //转换简历文件为文本内容
         String content = resumeService.file2Content(file);
         //分析简历
@@ -58,7 +58,7 @@ public class ResumeController {
             //存入数据库
             resumeService.save(resume);
         }
-        return ResponseEntity.ok(resumeVo);
+        return Result.success("简历上传成功", resumeVo);
     }
 
     /**
@@ -66,9 +66,9 @@ public class ResumeController {
      */
     @GetMapping("/check")
     @RequireLogin
-    public ResponseEntity<Boolean> checkResumeUploaded(HttpServletRequest request) {
-        boolean resume = resumeService.getResume(request);
-        return ResponseEntity.ok(resume);
+    public Result<Boolean> checkResumeUploaded(HttpServletRequest request) {
+        boolean hasResume = resumeService.getResume(request);
+        return Result.success(hasResume);
     }
 
 }

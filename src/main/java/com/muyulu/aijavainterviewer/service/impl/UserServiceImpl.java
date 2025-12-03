@@ -2,6 +2,7 @@ package com.muyulu.aijavainterviewer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.muyulu.aijavainterviewer.exception.UserException;
 import com.muyulu.aijavainterviewer.mapper.UserMapper;
 import com.muyulu.aijavainterviewer.model.dto.UserDto;
 import com.muyulu.aijavainterviewer.model.dto.UserLoginDto;
@@ -12,7 +13,6 @@ import com.muyulu.aijavainterviewer.util.JwtUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.logging.Log;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,7 +34,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, request.username());
         if (userMapper.selectOne(query) != null) {
-            throw new IllegalArgumentException("用户名已存在");
+            throw UserException.alreadyExists();
         }
         User user = new User();
         user.setUsername(request.username());
@@ -50,10 +50,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         User user = userMapper.selectOne(query);
         if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
+            throw UserException.notFound();
         }
         if (!passwordEncoder.matches(userDto.password(), user.getPassword())) {
-            throw new IllegalArgumentException("账号/密码错误");
+            throw UserException.passwordError();
         }
         
         // 生成 JWT Token
@@ -79,13 +79,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 从请求属性中获取用户ID(由 JWT 过滤器设置)
         Object userIdObj = request.getAttribute("userId");
         if (userIdObj == null) {
-            throw new IllegalArgumentException("用户未登录");
+            throw UserException.notLogin();
         }
         
         Long userId = (Long) userIdObj;
         User user = this.getById(userId);
         if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
+            throw UserException.notFound();
         }
         
         return user;

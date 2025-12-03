@@ -15,12 +15,9 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-
-import java.util.Map;
 
 @Service
 @Slf4j
@@ -43,6 +40,7 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         interviewChat.setUserId(loginUser.getId());
         interviewChat.setResumeId(loginUser.getResumeId());
         interviewChat.setStatus(InterviewChatEnum.INTERVIEWING.name());
+        
         //查询当前用户下这个简历是否为第一次开始聊天
         log.info("检查用户 {} 的简历 {} 是否已有聊天记录", loginUser.getId(), loginUser.getResumeId());
         boolean exists = lambdaQuery().eq(InterviewChat::getResumeId, interviewChat.getResumeId()).exists();
@@ -52,22 +50,42 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         }
 
         //从redis中获取简历内容
-        log.info("从Redis中获取用户 {} 的简历 {}", loginUser.getId(), loginUser.getResumeId());
+        log.info("========== 开始面试流程 ==========");
+        log.info("步骤1: 获取简历内容");
         String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId());
         if(resumeContent == null){
             //从数据库中读取简历内容
-            log.info("Redis中未找到用户 {} 的简历 {}，从数据库中读取", loginUser.getId(), loginUser.getResumeId());
+            log.info("Redis中未找到简历，从数据库读取");
             Resume resumeFromDB = resumeService.getByResumeId(loginUser.getResumeId());
             resumeContent = JSONUtil.toJsonStr(resumeFromDB);
         }
-        String userInput = "面试挂你好，这就是我的简历内容：" +  resumeContent;
-        return interViewAssistant.chatStream(loginUser.getResumeId(), userInput);
+        
+        log.info("步骤2: 使用RAG增强的AI面试官进行对话");
+        String userInput = "面试官你好，这是我的简历内容：" + resumeContent;
+        return interViewAssistant.chatStreamWithRag(
+            loginUser.getResumeId(), 
+            userInput,
+            resumeContent
+        );
     }
 
     @Override
     public Flux<String> continueInterviewChat(HttpServletRequest request, String userInput) {
         User loginUser = userService.getLoginUser(request);
-        log.info("用户 {} 继续面试聊天，输入内容：{}", loginUser.getId(), userInput);
-        return interViewAssistant.chatStream(loginUser.getResumeId(), userInput);
+        log.info("用户 {} 继续面试，输入: {}", loginUser.getId(), userInput);
+        
+        // 获取简历内容
+        String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId());
+        if(resumeContent == null){
+            Resume resumeFromDB = resumeService.getByResumeId(loginUser.getResumeId());
+            resumeContent = JSONUtil.toJsonStr(resumeFromDB);
+        }
+        
+        // 使用RAG增强的对话
+        return interViewAssistant.chatStreamWithRag(
+            loginUser.getResumeId(), 
+            userInput,
+            resumeContent
+        );
     }
 }
