@@ -26,8 +26,35 @@ spring:
       host: localhost
       port: 6379
       password:
-      ttl: 3600
+      ttl: 3600           # 简历缓存过期时间(秒)
       database: 0
+      # 连接池配置
+      lettuce:
+        pool:
+          max-active: 8    # 最大连接数
+          max-idle: 8      # 最大空闲连接
+          min-idle: 2      # 最小空闲连接
+          max-wait: 3000ms # 连接池最大阻塞等待时间
+      # 超时配置
+      timeout: 3000ms      # 连接超时时间
+      
+# 面试配置
+interview:
+  topics:
+    expire-hours: 24       # 已提问技术点过期时间(小时)
+
+# 限流配置
+rate-limit:
+  enabled: true            # 是否启用限流
+  global:
+    capacity: 100          # 全局令牌桶容量
+    rate: 50               # 全局每秒生成令牌数
+  user:
+    capacity: 20           # 单用户令牌桶容量
+    rate: 5                # 单用户每秒生成令牌数
+  ip:
+    capacity: 30           # 单IP令牌桶容量
+    rate: 10               # 单IP每秒生成令牌数
 server:
   port: 8123
   servlet:

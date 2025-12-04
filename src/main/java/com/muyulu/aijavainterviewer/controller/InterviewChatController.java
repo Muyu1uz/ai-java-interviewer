@@ -1,5 +1,6 @@
 package com.muyulu.aijavainterviewer.controller;
 
+import com.muyulu.aijavainterviewer.annotation.RateLimit;
 import com.muyulu.aijavainterviewer.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.service.InterviewChatService;
 import jakarta.annotation.Resource;
@@ -20,12 +21,26 @@ public class InterviewChatController {
 
     @PostMapping(value = "/start", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RequireLogin
+    @RateLimit(
+        name = "interview_start",
+        capacity = 10,
+        rate = 2,
+        limitType = RateLimit.LimitType.USER,
+        message = "面试开始过于频繁，请稍后再试"
+    )
     public Flux<String> startInterviewChat(HttpServletRequest request) {
         return interviewChatService.startInterviewChat(request);
     }
 
     @PostMapping(value = "/continue", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RequireLogin
+    @RateLimit(
+        name = "interview_continue",
+        capacity = 20,
+        rate = 5,
+        limitType = RateLimit.LimitType.USER,
+        message = "回复过于频繁，请稍后再试"
+    )
     public Flux<String> continueInterviewChat(HttpServletRequest request,
                                               @RequestParam("userInput") String userInput) {
         return interviewChatService.continueInterviewChat(request, userInput);

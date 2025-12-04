@@ -4,6 +4,8 @@ import com.muyulu.aijavainterviewer.constant.SystemConstant;
 import com.muyulu.aijavainterviewer.service.RagService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,6 +41,14 @@ public class InterViewAssistant {
     
     @Resource
     private RagService ragService;
+    
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+    
+    // Redis Key 前缀: interview:asked_topics:{chatId}
+    private static final String ASKED_TOPICS_KEY_PREFIX = "interview:asked_topics:";
+    // 已提问技术点的过期时间: 24小时
+    private static final long ASKED_TOPICS_EXPIRE_HOURS = 24;
 
     public InterViewAssistant(@Qualifier("dashScopeChatModel") ChatModel chatModel) {
         ChatMemoryRepository chatMemoryRepository = new InMemoryChatMemoryRepository();
@@ -164,11 +175,28 @@ public class InterViewAssistant {
     }
     
     /**
-     * 从对话历史中提取已提问的技术点
+     * 从 Redis 和对话历史中提取已提问的技术点
+     * 1. 先从 Redis 读取已缓存的技术点
+     * 2. 再从对话历史中提取新的技术点
+     * 3. 将新提取的技术点保存到 Redis
      */
     private Set<String> extractAskedTopics(String chatId) {
+        String redisKey = ASKED_TOPICS_KEY_PREFIX + chatId;
         Set<String> topics = new HashSet<>();
-        List<Message> messages = chatMemory.get(chatId); // 获取更多历史
+        
+        // 1. 从 Redis 中读取已提问的技术点
+        try {
+            Set<String> cachedTopics = redisTemplate.opsForSet().members(redisKey);
+            if (cachedTopics != null && !cachedTopics.isEmpty()) {
+                topics.addAll(cachedTopics);
+                log.info("从 Redis 加载已提问技术点: {}", topics);
+            }
+        } catch (Exception e) {
+            log.warn("从 Redis 读取已提问技术点失败: {}", e.getMessage());
+        }
+        
+        // 2. 从对话历史中提取新的技术点
+        List<Message> messages = chatMemory.get(chatId);
         
         // 定义技术关键词模式(面试官的问题)
         Pattern pattern = Pattern.compile(
@@ -177,10 +205,12 @@ public class InterViewAssistant {
             "分布式|微服务|限流|熔断|事务|索引|MQ|" +
             "HashMap|ConcurrentHashMap|ArrayList|AQS|" +
             "synchronized|volatile|ThreadLocal|" +
-            "B\\+树|MVCC|死锁|慢查询)",
+            "B\\+树|MVCC|死锁|慢查询|Docker|Kubernetes|Nginx|" +
+            "集合|泛型|反射|注解|异常|IO|NIO|序列化)",
             Pattern.CASE_INSENSITIVE
         );
         
+        Set<String> newTopics = new HashSet<>();
         for (Message message : messages) {
             // 只提取 AI 的问题(AssistantMessage)
             if (message instanceof AssistantMessage) {
@@ -190,13 +220,29 @@ public class InterViewAssistant {
                     // 使用正则匹配技术关键词
                     Matcher matcher = pattern.matcher(content);
                     while (matcher.find()) {
-                        topics.add(matcher.group());
+                        String topic = matcher.group();
+                        if (!topics.contains(topic)) {
+                            newTopics.add(topic);
+                            topics.add(topic);
+                        }
                     }
                 }
             }
         }
         
-        log.info("提取到已提问技术点: {}", topics);
+        // 3. 将新提取的技术点保存到 Redis
+        if (!newTopics.isEmpty()) {
+            try {
+                redisTemplate.opsForSet().add(redisKey, newTopics.toArray(new String[0]));
+                // 设置过期时间 (24小时)
+                redisTemplate.expire(redisKey, Duration.ofHours(ASKED_TOPICS_EXPIRE_HOURS));
+                log.info("新增技术点已保存到 Redis: {}", newTopics);
+            } catch (Exception e) {
+                log.warn("保存技术点到 Redis 失败: {}", e.getMessage());
+            }
+        }
+        
+        log.info("当前已提问技术点总数: {}, 内容: {}", topics.size(), topics);
         return topics;
     }
     
@@ -211,6 +257,71 @@ public class InterViewAssistant {
         return "## 已提问技术点清单（严禁重复）\n" +
                String.join("、", topics) +
                "\n\n**提问前必须检查上述清单，选择完全不同的技术点。**";
+    }
+    
+    /**
+     * 获取指定对话的所有已提问技术点（公共方法）
+     * @param chatId 对话ID
+     * @return 已提问技术点集合
+     */
+    public Set<String> getAskedTopics(String chatId) {
+        String redisKey = ASKED_TOPICS_KEY_PREFIX + chatId;
+        try {
+            Set<String> topics = redisTemplate.opsForSet().members(redisKey);
+            return topics != null ? topics : new HashSet<>();
+        } catch (Exception e) {
+            log.error("获取已提问技术点失败: {}", e.getMessage());
+            return new HashSet<>();
+        }
+    }
+    
+    /**
+     * 清除指定对话的已提问技术点（重新开始面试时使用）
+     * @param chatId 对话ID
+     */
+    public void clearAskedTopics(String chatId) {
+        String redisKey = ASKED_TOPICS_KEY_PREFIX + chatId;
+        try {
+            redisTemplate.delete(redisKey);
+            log.info("已清除对话 {} 的技术点记录", chatId);
+        } catch (Exception e) {
+            log.error("清除技术点记录失败: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * 手动添加已提问的技术点（可用于初始化或补充）
+     * @param chatId 对话ID
+     * @param topics 技术点集合
+     */
+    public void addAskedTopics(String chatId, Set<String> topics) {
+        if (topics == null || topics.isEmpty()) {
+            return;
+        }
+        String redisKey = ASKED_TOPICS_KEY_PREFIX + chatId;
+        try {
+            redisTemplate.opsForSet().add(redisKey, topics.toArray(new String[0]));
+            redisTemplate.expire(redisKey, Duration.ofHours(ASKED_TOPICS_EXPIRE_HOURS));
+            log.info("已添加技术点到对话 {}: {}", chatId, topics);
+        } catch (Exception e) {
+            log.error("添加技术点失败: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取已提问技术点的数量
+     * @param chatId 对话ID
+     * @return 技术点数量
+     */
+    public long getAskedTopicsCount(String chatId) {
+        String redisKey = ASKED_TOPICS_KEY_PREFIX + chatId;
+        try {
+            Long count = redisTemplate.opsForSet().size(redisKey);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            log.error("获取技术点数量失败: {}", e.getMessage());
+            return 0;
+        }
     }
 }
 

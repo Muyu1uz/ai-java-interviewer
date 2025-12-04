@@ -29,12 +29,11 @@ public class RagService {
      * @return 相关文档内容列表
      */
     public List<String> searchRelevantKnowledge(String resumeContent, int topK) {
-        log.info("基于简历检索相关知识, topK: {}", topK);
+        log.debug("基于简历检索相关知识, topK: {}", topK);
         
         try {
             // 1. 从简历中提取关键技术点作为查询
             String query = extractTechKeywords(resumeContent);
-            log.info("提取的查询关键词: {}", query.substring(0, Math.min(100, query.length())));
             
             // 2. 构建搜索请求
             SearchRequest searchRequest = SearchRequest.builder()
@@ -44,10 +43,7 @@ public class RagService {
                     .build();
             
             // 3. 执行向量检索
-            log.debug("执行向量检索...");
             List<Document> results = vectorStore.similaritySearch(searchRequest);
-            
-            log.info("向量检索结果数量: {}", results.size());
             
             if (results.isEmpty()) {
                 log.warn("未找到相关知识文档, query: {}", query);
@@ -105,13 +101,9 @@ public class RagService {
      * @return 格式化的知识上下文
      */
     public String buildRagContext(String resumeContent, int topK) {
-        log.info("构建RAG上下文, 简历长度: {}, topK: {}", 
-                resumeContent != null ? resumeContent.length() : 0, topK);
-        
         List<String> knowledgeDocs = searchRelevantKnowledge(resumeContent, topK);
         
         if (knowledgeDocs.isEmpty()) {
-            log.warn("未检索到任何相关知识文档");
             return "";
         }
         
@@ -151,19 +143,15 @@ public class RagService {
      */
     public boolean isVectorStoreReady() {
         try {
-            log.debug("检查向量库状态...");
             List<Document> results = vectorStore.similaritySearch(
                 SearchRequest.builder()
-                    .query("Java")
+                    .query("test")
                     .topK(1)
                     .build()
             );
-            boolean ready = !results.isEmpty();
-            log.info("向量库状态检查: {}, 测试查询返回 {} 个结果", 
-                    ready ? "就绪" : "未就绪", results.size());
-            return ready;
+            return !results.isEmpty();
         } catch (Exception e) {
-            log.error("向量库未就绪", e);
+            log.warn("向量库未就绪: {}", e.getMessage());
             return false;
         }
     }

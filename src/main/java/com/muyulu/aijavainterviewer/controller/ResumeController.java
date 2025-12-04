@@ -2,6 +2,7 @@ package com.muyulu.aijavainterviewer.controller;
 
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.google.common.hash.BloomFilter;
+import com.muyulu.aijavainterviewer.annotation.RateLimit;
 import com.muyulu.aijavainterviewer.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.model.dto.ResumeAnalyzeRequest;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
@@ -31,6 +32,13 @@ public class ResumeController {
     @PostMapping("/create")
     @Transactional
     @RequireLogin
+    @RateLimit(
+        name = "resume_upload",
+        capacity = 5,
+        rate = 1,
+        limitType = RateLimit.LimitType.USER,
+        message = "简历上传过于频繁，请稍后再试"
+    )
     public Result<ResumeVo> create(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws GraphRunnerException {
         //转换简历文件为文本内容
         String content = resumeService.file2Content(file);

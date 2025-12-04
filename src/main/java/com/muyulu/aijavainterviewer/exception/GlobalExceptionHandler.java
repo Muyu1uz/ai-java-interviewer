@@ -22,11 +22,16 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     * 处理业务异常
+     * 处理业务异常（包括限流异常）
      */
     @ExceptionHandler(BusinessException.class)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        // 限流异常特殊处理
+        if (e.getCode() == 429) {
+            log.warn("限流触发: {}", e.getMessage());
+        } else {
+            log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        }
         return Result.error(e.getCode(), e.getMessage());
     }
 

@@ -34,6 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
         log.info("JWT过滤器处理请求: {}", requestURI);
         
+        // 跳过 Swagger 相关路径
+        if (shouldNotFilter(requestURI)) {
+            log.info("跳过JWT验证的路径: {}", requestURI);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         // 从请求头中获取 Token
         String token = getTokenFromRequest(request);
         
@@ -73,5 +80,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
+    }
+    
+    /**
+     * 判断是否应该跳过JWT验证
+     */
+    private boolean shouldNotFilter(String requestURI) {
+        // Swagger 相关路径
+        return requestURI.startsWith("/api/v3/api-docs") ||
+               requestURI.startsWith("/api/swagger-ui") ||
+               requestURI.equals("/api/swagger-ui.html") ||
+               requestURI.startsWith("/swagger-ui") ||
+               requestURI.startsWith("/v3/api-docs") ||
+               requestURI.equals("/swagger-ui.html") ||
+               requestURI.startsWith("/swagger-resources") ||
+               requestURI.startsWith("/webjars/");
     }
 }
