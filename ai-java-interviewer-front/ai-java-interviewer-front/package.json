@@ -1,0 +1,27 @@
+{
+  "name": "ai-java-interviewer-front",
+  "version": "1.0.0",
+  "description": "A Vue 3 application for uploading resumes and user authentication.",
+  "main": "index.js",
+  "scripts": {
+    "serve": "vite",
+    "build": "vite build",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "vue": "^3.2.0",
+    "vue-router": "^4.0.0",
+    "vuex": "^4.0.0",
+    "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "vite": "^2.0.0",
+    "typescript": "^4.0.0",
+    "eslint": "^7.0.0",
+    "eslint-plugin-vue": "^7.0.0",
+    "vitest": "^0.0.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
