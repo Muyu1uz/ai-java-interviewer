@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.annotation;
+package com.muyulu.aijavainterviewer.common.annotation;
 
 import java.lang.annotation.*;
 

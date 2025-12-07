@@ -1,6 +1,6 @@
 package com.muyulu.aijavainterviewer.filter;
 
-import com.muyulu.aijavainterviewer.util.JwtUtil;
+import com.muyulu.aijavainterviewer.common.util.JwtUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

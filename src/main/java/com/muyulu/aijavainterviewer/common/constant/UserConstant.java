@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.constant;
+package com.muyulu.aijavainterviewer.common.constant;
 
 public interface UserConstant {
 

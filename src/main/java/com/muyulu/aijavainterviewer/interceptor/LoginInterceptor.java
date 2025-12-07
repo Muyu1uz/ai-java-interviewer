@@ -1,6 +1,6 @@
 package com.muyulu.aijavainterviewer.interceptor;
 
-import com.muyulu.aijavainterviewer.annotation.RequireLogin;
+import com.muyulu.aijavainterviewer.common.annotation.RequireLogin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;

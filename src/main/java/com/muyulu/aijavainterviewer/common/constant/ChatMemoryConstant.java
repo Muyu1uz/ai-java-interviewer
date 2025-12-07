@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.constant;
+package com.muyulu.aijavainterviewer.common.constant;
 
 public interface ChatMemoryConstant {
     public static final String CHAT_MEMORY_RETRIEVE_SIZE_KEY = "chat_memory_retrieve_size";

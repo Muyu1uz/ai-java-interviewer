@@ -1,6 +1,4 @@
-package com.muyulu.aijavainterviewer.exception;
-
-import static com.muyulu.aijavainterviewer.exception.BusinessException.ErrorCode;
+package com.muyulu.aijavainterviewer.common.exception;
 
 /**
  * 用户相关异常

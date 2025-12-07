@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.util;
+package com.muyulu.aijavainterviewer.common.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

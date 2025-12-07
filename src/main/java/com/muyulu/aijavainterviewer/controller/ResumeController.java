@@ -2,8 +2,8 @@ package com.muyulu.aijavainterviewer.controller;
 
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.google.common.hash.BloomFilter;
-import com.muyulu.aijavainterviewer.annotation.RateLimit;
-import com.muyulu.aijavainterviewer.annotation.RequireLogin;
+import com.muyulu.aijavainterviewer.common.annotation.RateLimit;
+import com.muyulu.aijavainterviewer.common.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.model.dto.ResumeAnalyzeRequest;
 import com.muyulu.aijavainterviewer.model.entity.Resume;
 import com.muyulu.aijavainterviewer.model.entity.User;

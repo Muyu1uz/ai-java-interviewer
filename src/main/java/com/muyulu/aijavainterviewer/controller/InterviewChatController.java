@@ -1,7 +1,7 @@
 package com.muyulu.aijavainterviewer.controller;
 
-import com.muyulu.aijavainterviewer.annotation.RateLimit;
-import com.muyulu.aijavainterviewer.annotation.RequireLogin;
+import com.muyulu.aijavainterviewer.common.annotation.RateLimit;
+import com.muyulu.aijavainterviewer.common.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.service.InterviewChatService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;

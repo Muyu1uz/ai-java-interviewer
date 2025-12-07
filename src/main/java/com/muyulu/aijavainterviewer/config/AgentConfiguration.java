@@ -2,7 +2,7 @@ package com.muyulu.aijavainterviewer.config;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
-import com.muyulu.aijavainterviewer.constant.SystemConstant;
+import com.muyulu.aijavainterviewer.common.constant.SystemConstant;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;

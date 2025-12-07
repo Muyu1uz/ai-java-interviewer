@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.exception;
+package com.muyulu.aijavainterviewer.common.exception;
 
 import lombok.Getter;
 

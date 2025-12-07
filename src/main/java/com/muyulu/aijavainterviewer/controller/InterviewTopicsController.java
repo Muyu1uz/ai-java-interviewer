@@ -1,6 +1,6 @@
 package com.muyulu.aijavainterviewer.controller;
 
-import com.muyulu.aijavainterviewer.annotation.RequireLogin;
+import com.muyulu.aijavainterviewer.common.annotation.RequireLogin;
 import com.muyulu.aijavainterviewer.assistant.InterViewAssistant;
 import com.muyulu.aijavainterviewer.common.Result;
 import com.muyulu.aijavainterviewer.model.entity.User;

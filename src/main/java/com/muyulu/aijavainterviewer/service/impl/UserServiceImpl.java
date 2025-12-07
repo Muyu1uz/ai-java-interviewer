@@ -2,22 +2,19 @@ package com.muyulu.aijavainterviewer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.muyulu.aijavainterviewer.exception.UserException;
+import com.muyulu.aijavainterviewer.common.exception.UserException;
 import com.muyulu.aijavainterviewer.mapper.UserMapper;
 import com.muyulu.aijavainterviewer.model.dto.UserDto;
 import com.muyulu.aijavainterviewer.model.dto.UserLoginDto;
 import com.muyulu.aijavainterviewer.model.entity.User;
 import com.muyulu.aijavainterviewer.model.vo.UserLoginVo;
 import com.muyulu.aijavainterviewer.service.UserService;
-import com.muyulu.aijavainterviewer.util.JwtUtil;
+import com.muyulu.aijavainterviewer.common.util.JwtUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import static com.muyulu.aijavainterviewer.constant.UserConstant.USER_LOGIN_STATE;
 
 @Slf4j
 @Service

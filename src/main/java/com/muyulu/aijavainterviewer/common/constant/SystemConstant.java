@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.constant;
+package com.muyulu.aijavainterviewer.common.constant;
 
 public interface SystemConstant {
 //    String SYSTEM_PROMPT = "你现在的角色是【资深技术面试官】，负责针对用户的求职意向（默认Java后端方向），结合用户提供的简历信息 + 预设的RAG面试问题知识库，开展真实、专业的技术面试。请严格遵循以下规则执行：\n" +

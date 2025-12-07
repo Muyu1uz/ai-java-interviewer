@@ -1,6 +1,6 @@
 package com.muyulu.aijavainterviewer.assistant;
 
-import com.muyulu.aijavainterviewer.constant.SystemConstant;
+import com.muyulu.aijavainterviewer.common.constant.SystemConstant;
 import com.muyulu.aijavainterviewer.service.RagService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -22,15 +22,14 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.muyulu.aijavainterviewer.constant.ChatMemoryConstant.CHAT_MEMORY_CONVERSATION_ID_KEY;
-import static com.muyulu.aijavainterviewer.constant.ChatMemoryConstant.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
+import static com.muyulu.aijavainterviewer.common.constant.ChatMemoryConstant.CHAT_MEMORY_CONVERSATION_ID_KEY;
+import static com.muyulu.aijavainterviewer.common.constant.ChatMemoryConstant.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
 
 @Slf4j
 @Component
@@ -117,13 +116,24 @@ public class InterViewAssistant {
         Set<String> askedTopics = extractAskedTopics(chatId);
         String askedTopicsPrompt = buildAskedTopicsPrompt(askedTopics);
         
-        // RAG增强: 检索相关知识
+        // RAG增强: 检索相关知识 (限制 topK=3，避免上下文过长)
         String ragContext = "";
         try {
             if (ragService.isVectorStoreReady()) {
-                ragContext = ragService.buildRagContext(resumeContent, 3);
+                long ragStartTime = System.currentTimeMillis();
+                ragContext = ragService.buildRagContext(resumeContent, 3);  // 限制最多3个文档片段
+                long ragDuration = System.currentTimeMillis() - ragStartTime;
+                
                 if (!ragContext.isEmpty()) {
-                    log.info("✓ RAG检索成功，注入知识上下文");
+                    int contextLength = ragContext.length();
+                    log.info("✓ RAG检索成功，上下文长度: {} 字符, 耗时: {} ms", contextLength, ragDuration);
+                    
+                    // 警告：如果上下文过长
+                    if (contextLength > 6000) {
+                        log.warn("⚠ RAG 上下文较长 ({} 字符)，可能影响响应速度", contextLength);
+                    }
+                } else {
+                    log.debug("RAG 检索未返回相关内容");
                 }
             }
         } catch (Exception e) {

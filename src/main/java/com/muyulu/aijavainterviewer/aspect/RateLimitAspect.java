@@ -1,7 +1,7 @@
 package com.muyulu.aijavainterviewer.aspect;
 
-import com.muyulu.aijavainterviewer.annotation.RateLimit;
-import com.muyulu.aijavainterviewer.exception.BusinessException;
+import com.muyulu.aijavainterviewer.common.annotation.RateLimit;
+import com.muyulu.aijavainterviewer.common.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -33,7 +33,7 @@ public class RateLimitAspect {
 
     private static final String RATE_LIMIT_KEY_PREFIX = "rate_limit:";
 
-    @Around("@annotation(com.muyulu.aijavainterviewer.annotation.RateLimit)")
+    @Around("@annotation(com.muyulu.aijavainterviewer.common.annotation.RateLimit)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
