@@ -2,14 +2,13 @@ package com.muyulu.aijavainterviewer.controller;
 
 import com.muyulu.aijavainterviewer.common.annotation.RateLimit;
 import com.muyulu.aijavainterviewer.common.annotation.RequireLogin;
+import com.muyulu.aijavainterviewer.model.vo.QuestionPoolVO;
 import com.muyulu.aijavainterviewer.service.InterviewChatService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 @RestController
@@ -44,5 +43,30 @@ public class InterviewChatController {
     public Flux<String> continueInterviewChat(HttpServletRequest request,
                                               @RequestParam("userInput") String userInput) {
         return interviewChatService.continueInterviewChat(request, userInput);
+    }
+    
+    /**
+     * 一键生成面试问题池
+     * 
+     * @param request HTTP请求
+     * @param resumeFile 简历文件 (PDF/图片)
+     * @param questionCount 期望生成的问题数量 (默认20)
+     * @return 问题池展示VO
+     */
+    @PostMapping("/generate-pool")
+    @RequireLogin
+    @RateLimit(
+        name = "generate_question_pool",
+        capacity = 5,
+        rate = 1,
+        limitType = RateLimit.LimitType.USER,
+        message = "问题池生成过于频繁，请稍后再试"
+    )
+    public QuestionPoolVO generateQuestionPool(
+            HttpServletRequest request,
+            @RequestParam("resumeFile") MultipartFile resumeFile,
+            @RequestParam(value = "questionCount", defaultValue = "20") Integer questionCount) {
+        
+        return interviewChatService.generateQuestionPool(request, resumeFile, questionCount);
     }
 }

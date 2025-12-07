@@ -159,132 +159,6 @@ public class RagService {
     }
 
     /**
-     * 根据来源过滤检索文档
-     * 支持模糊匹配，如 "redis" 可以匹配 "redis-basics.md"
-     * 
-     * @param query 查询文本
-     * @param sourcePattern 来源文件名模式（支持部分匹配）
-     * @param topK 返回结果数量
-     * @return 匹配的文档内容列表
-     */
-    public List<String> searchBySource(String query, String sourcePattern, int topK) {
-        log.debug("按来源检索: query={}, source={}, topK={}", query, sourcePattern, topK);
-        
-        try {
-            // 使用元数据过滤表达式
-            // PostgreSQL pgvector 支持 LIKE 操作
-            String filterExpression = String.format("source like '%%%s%%'", sourcePattern);
-            
-            SearchRequest searchRequest = SearchRequest.builder()
-                    .query(query)
-                    .topK(topK)
-                    .similarityThreshold(0.65)
-                    .filterExpression(filterExpression)  // 添加过滤条件
-                    .build();
-            
-            List<Document> results = vectorStore.similaritySearch(searchRequest);
-            
-            if (results.isEmpty()) {
-                log.warn("未找到匹配来源的文档: source={}", sourcePattern);
-                return List.of();
-            }
-            
-            log.info("✓ 从来源 '{}' 检索到 {} 个相关片段", sourcePattern, results.size());
-            
-            return results.stream()
-                    .map(doc -> {
-                        String source = (String) doc.getMetadata().get("source");
-                        return String.format("[来源: %s]\n%s", source, doc.getFormattedContent());
-                    })
-                    .collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("按来源检索失败", e);
-            return List.of();
-        }
-    }
-
-    /**
-     * 根据类别过滤检索文档
-     * 
-     * @param query 查询文本
-     * @param category 文档类别（如：java-basic, spring, redis, mysql）
-     * @param topK 返回结果数量
-     * @return 匹配的文档内容列表
-     */
-    public List<String> searchByCategory(String query, String category, int topK) {
-        log.debug("按类别检索: query={}, category={}, topK={}", query, category, topK);
-        
-        try {
-            String filterExpression = String.format("category == '%s'", category);
-            
-            SearchRequest searchRequest = SearchRequest.builder()
-                    .query(query)
-                    .topK(topK)
-                    .similarityThreshold(0.65)
-                    .filterExpression(filterExpression)
-                    .build();
-            
-            List<Document> results = vectorStore.similaritySearch(searchRequest);
-            
-            if (results.isEmpty()) {
-                log.warn("未找到匹配类别的文档: category={}", category);
-                return List.of();
-            }
-            
-            log.info("✓ 从类别 '{}' 检索到 {} 个相关片段", category, results.size());
-            
-            return results.stream()
-                    .map(doc -> {
-                        String source = (String) doc.getMetadata().get("source");
-                        String cat = (String) doc.getMetadata().get("category");
-                        return String.format("[类别: %s | 来源: %s]\n%s", cat, source, doc.getFormattedContent());
-                    })
-                    .collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("按类别检索失败", e);
-            return List.of();
-        }
-    }
-
-    /**
-     * 组合多个元数据条件检索
-     * 
-     * @param query 查询文本
-     * @param filterExpression 自定义过滤表达式（如："category == 'java' && source like '%redis%'"）
-     * @param topK 返回结果数量
-     * @return 匹配的文档内容列表
-     */
-    public List<String> searchWithFilter(String query, String filterExpression, int topK) {
-        log.debug("自定义过滤检索: query={}, filter={}, topK={}", query, filterExpression, topK);
-        
-        try {
-            SearchRequest searchRequest = SearchRequest.builder()
-                    .query(query)
-                    .topK(topK)
-                    .similarityThreshold(0.65)
-                    .filterExpression(filterExpression)
-                    .build();
-            
-            List<Document> results = vectorStore.similaritySearch(searchRequest);
-            
-            log.info("✓ 自定义过滤检索到 {} 个相关片段", results.size());
-            
-            return results.stream()
-                    .map(doc -> {
-                        String source = (String) doc.getMetadata().get("source");
-                        return String.format("[来源: %s]\n%s", source, doc.getFormattedContent());
-                    })
-                    .collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("自定义过滤检索失败", e);
-            return List.of();
-        }
-    }
-
-    /**
      * 构建 RAG 增强的提示词上下文
      * 
      * @param resumeContent 简历内容
@@ -319,6 +193,14 @@ public class RagService {
         return result;
     }
 
+    /**
+     * 从简历内容提取技术关键词 (公共方法，供外部调用)
+     * 优化版本：优先使用 AI 提取，失败时降级到正则表达式
+     */
+    public String extractKeywords(String resumeContent) {
+        return extractTechKeywords(resumeContent);
+    }
+    
     /**
      * 从简历内容提取技术关键词
      * 优化版本：优先使用 AI 提取，失败时降级到正则表达式

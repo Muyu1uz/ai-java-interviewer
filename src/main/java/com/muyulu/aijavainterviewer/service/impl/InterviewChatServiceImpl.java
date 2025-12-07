@@ -3,12 +3,14 @@ package com.muyulu.aijavainterviewer.service.impl;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.muyulu.aijavainterviewer.assistant.InterViewAssistant;
+import com.muyulu.aijavainterviewer.graph.InterviewGraphState;
 import com.muyulu.aijavainterviewer.mapper.InterviewChatMapper;
-import com.muyulu.aijavainterviewer.model.entity.InterviewChat;
-import com.muyulu.aijavainterviewer.model.entity.Resume;
-import com.muyulu.aijavainterviewer.model.entity.User;
+import com.muyulu.aijavainterviewer.model.entity.*;
+import com.muyulu.aijavainterviewer.model.vo.QuestionPoolVO;
+import com.muyulu.aijavainterviewer.model.vo.QuestionVO;
 import com.muyulu.aijavainterviewer.model.enums.InterviewChatEnum;
 import com.muyulu.aijavainterviewer.service.InterviewChatService;
+import com.muyulu.aijavainterviewer.service.InterviewGraphService;
 import com.muyulu.aijavainterviewer.service.ResumeService;
 import com.muyulu.aijavainterviewer.service.UserService;
 import jakarta.annotation.Resource;
@@ -17,7 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -31,6 +37,8 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
     private StringRedisTemplate redisTemplate;
     @Resource
     private ResumeService resumeService;
+    @Resource
+    private InterviewGraphService interviewGraphService;
 
     @Override
     public Flux<String> startInterviewChat(HttpServletRequest request) {
@@ -87,5 +95,67 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
             userInput,
             resumeContent
         );
+    }
+    
+    @Override
+    public QuestionPoolVO generateQuestionPool(HttpServletRequest request,
+                                              MultipartFile resumeFile,
+                                              Integer questionCount) {
+        User loginUser = userService.getLoginUser(request);
+        log.info("========== 用户 {} 开始生成问题池 ==========", loginUser.getId());
+        
+        // 构建 Graph State
+        InterviewGraphState state = new InterviewGraphState();
+        state.setResumeFile(resumeFile);
+        state.setQuestionCount(questionCount != null ? questionCount : 20);
+        state.setUserId(loginUser.getId());
+        state.setResumeId(loginUser.getResumeId());
+        
+        // 调用 Graph 服务生成问题池
+        QuestionPool questionPool = interviewGraphService.generateQuestionPool(state);
+        
+        log.info("========== 问题池生成完成, 共 {} 道题 ==========", questionPool.getTotalCount());
+        
+        // 转换为 VO
+        return convertToVO(questionPool);
+    }
+    
+    /**
+     * 将 QuestionPool 转换为前端展示的 VO
+     */
+    private QuestionPoolVO convertToVO(QuestionPool pool) {
+        // 转换问题列表
+        List<QuestionVO> questionVOs = pool.getAllQuestions().stream()
+                .map(q -> QuestionVO.builder()
+                        .content(q.getContent())
+                        .category(q.getCategory())
+                        .level(q.getLevel() != null ? q.getLevel().getDescription() : "未知")
+                        .keywords(q.getKeywords())
+                        .build())
+                .toList();
+        
+        // 统计分类数量
+        Map<String, Integer> categoryStats = pool.getByCategory().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().size()
+                ));
+        
+        // 统计难度数量
+        Map<String, Integer> levelStats = pool.getByLevel().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        e -> e.getKey().getDescription(),
+                        e -> e.getValue().size()
+                ));
+        
+        return QuestionPoolVO.builder()
+                .poolId(pool.getPoolId())
+                .totalCount(pool.getTotalCount())
+                .questions(questionVOs)
+                .categoryStats(categoryStats)
+                .levelStats(levelStats)
+                .suggestions(pool.getInterviewSuggestions())
+                .generatedAt(pool.getGeneratedAt())
+                .build();
     }
 }
