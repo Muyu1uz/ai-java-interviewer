@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -128,43 +129,63 @@ public class InterviewGraphService {
     
     /**
      * Node 4: 分层生成问题
-     * 调用 AI 生成基础/进阶/高级问题
+     * 调用 AI 生成基础/进阶/高级问题（使用 CompletableFuture 并行优化）
      */
     private InterviewGraphState generateQuestions(InterviewGraphState state) {
-        log.info("Node 4: 生成面试问题");
-        
-        List<Question> allQuestions = new ArrayList<>();
+        log.info("Node 4: 生成面试问题（并行执行）");
         
         int totalCount = state.getQuestionCount();
         int basicCount = (int) (totalCount * state.getBasicRatio());
         int advancedCount = (int) (totalCount * state.getAdvancedRatio());
         int expertCount = totalCount - basicCount - advancedCount;
         
-        // 生成基础题
-        log.info("生成基础题 {} 道...", basicCount);
-        List<Question> basicQuestions = generateQuestionsByLevel(
-                state, Question.DifficultyLevel.BASIC, basicCount
-        );
-        allQuestions.addAll(basicQuestions);
+        // 使用 CompletableFuture 并行生成三个难度级别的问题
+        CompletableFuture<List<Question>> basicFuture = CompletableFuture.supplyAsync(() -> {
+            log.info("开始生成基础题 {} 道...", basicCount);
+            List<Question> questions = generateQuestionsByLevel(state, Question.DifficultyLevel.BASIC, basicCount);
+            log.info("✓ 基础题生成完成");
+            return questions;
+        });
         
-        // 生成进阶题
-        log.info("生成进阶题 {} 道...", advancedCount);
-        List<Question> advancedQuestions = generateQuestionsByLevel(
-                state, Question.DifficultyLevel.ADVANCED, advancedCount
-        );
-        allQuestions.addAll(advancedQuestions);
+        CompletableFuture<List<Question>> advancedFuture = CompletableFuture.supplyAsync(() -> {
+            log.info("开始生成进阶题 {} 道...", advancedCount);
+            List<Question> questions = generateQuestionsByLevel(state, Question.DifficultyLevel.ADVANCED, advancedCount);
+            log.info("✓ 进阶题生成完成");
+            return questions;
+        });
         
-        // 生成高级题
-        log.info("生成高级题 {} 道...", expertCount);
-        List<Question> expertQuestions = generateQuestionsByLevel(
-                state, Question.DifficultyLevel.EXPERT, expertCount
-        );
-        allQuestions.addAll(expertQuestions);
+        CompletableFuture<List<Question>> expertFuture = CompletableFuture.supplyAsync(() -> {
+            log.info("开始生成高级题 {} 道...", expertCount);
+            List<Question> questions = generateQuestionsByLevel(state, Question.DifficultyLevel.EXPERT, expertCount);
+            log.info("✓ 高级题生成完成");
+            return questions;
+        });
         
-        state.setQuestions(allQuestions);
-        log.info("✓ 问题生成完成, 共 {} 道题", allQuestions.size());
-        
-        return state;
+        // 等待所有任务完成并合并结果
+        try {
+            List<Question> allQuestions = new ArrayList<>();
+            
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    basicFuture, advancedFuture, expertFuture
+            );
+            
+            // 阻塞等待所有任务完成
+            allFutures.join();
+            
+            // 收集结果
+            allQuestions.addAll(basicFuture.get());
+            allQuestions.addAll(advancedFuture.get());
+            allQuestions.addAll(expertFuture.get());
+            
+            state.setQuestions(allQuestions);
+            log.info("✓ 问题生成完成（并行执行）, 共 {} 道题", allQuestions.size());
+            
+            return state;
+            
+        } catch (Exception e) {
+            log.error("并行生成问题失败", e);
+            throw new RuntimeException("生成问题失败: " + e.getMessage(), e);
+        }
     }
     
     /**
