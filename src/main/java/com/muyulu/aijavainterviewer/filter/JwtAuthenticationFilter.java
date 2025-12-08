@@ -1,12 +1,14 @@
 package com.muyulu.aijavainterviewer.filter;
 
 import com.muyulu.aijavainterviewer.common.util.JwtUtil;
+import com.muyulu.aijavainterviewer.service.impl.UserServiceImpl;
 import jakarta.annotation.Resource;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -19,9 +21,12 @@ import java.io.IOException;
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
     @Resource
     private JwtUtil jwtUtil;
+    
+    @Lazy
+    @Resource
+    private UserServiceImpl userService;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -41,11 +46,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         
-        // 从请求头中获取 Token
+        // 从请求头中提取 Token
         String token = getTokenFromRequest(request);
         
         if (StringUtils.hasText(token)) {
             log.info("检测到 Token: {}", token.substring(0, Math.min(20, token.length())) + "...");
+            
+            // 检查 Token 是否在黑名单中
+            if (userService.isTokenBlacklisted(token)) {
+                log.warn("Token 已被加入黑名单（用户已退出登录）");
+                filterChain.doFilter(request, response);
+                return;
+            }
             
             if (jwtUtil.validateToken(token)) {
                 // Token 有效,将用户信息存入请求属性

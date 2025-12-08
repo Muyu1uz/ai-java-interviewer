@@ -13,8 +13,12 @@ import com.muyulu.aijavainterviewer.common.util.JwtUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -26,6 +30,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private UserMapper userMapper;
     @Resource
     private JwtUtil jwtUtil;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    private static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
 
     public User register(UserDto request) {
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<User>()
@@ -65,6 +73,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         log.info("用户登录成功，用户ID: {}", user.getId());
         return loginVo;
+    }
+
+    @Override
+    public void logout(HttpServletRequest request) {
+        // 获取 Token
+        String token = extractToken(request);
+        if (token == null) {
+            throw UserException.notLogin();
+        }
+        
+        // 获取当前用户信息
+        Object userIdObj = request.getAttribute("userId");
+        if (userIdObj == null) {
+            throw UserException.notLogin();
+        }
+        
+        Long userId = (Long) userIdObj;
+        
+        // 将 Token 加入黑名单（Redis）
+        // 过期时间设置为 Token 的剩余有效时间
+        Long expiration = jwtUtil.getExpirationFromToken(token);
+        if (expiration != null && expiration > 0) {
+            String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
+            redisTemplate.opsForValue().set(
+                blacklistKey, 
+                String.valueOf(userId), 
+                expiration, 
+                TimeUnit.MILLISECONDS
+            );
+        }
+        
+        log.info("用户退出登录，用户ID: {}", userId);
+    }
+    
+    /**
+     * 从请求头中提取 Token
+     */
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
+    /**
+     * 检查 Token 是否在黑名单中
+     */
+    public boolean isTokenBlacklisted(String token) {
+        String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey));
     }
 
     /**

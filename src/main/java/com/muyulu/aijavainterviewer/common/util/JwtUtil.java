@@ -112,4 +112,21 @@ public class JwtUtil {
             return true;
         }
     }
+    
+    /**
+     * 获取 Token 的剩余有效时间（毫秒）
+     * @param token JWT Token
+     * @return 剩余有效时间（毫秒），如果 Token 无效返回 null
+     */
+    public Long getExpirationFromToken(String token) {
+        try {
+            Claims claims = parseToken(token);
+            Date expiration = claims.getExpiration();
+            long now = System.currentTimeMillis();
+            long expirationTime = expiration.getTime();
+            return expirationTime > now ? (expirationTime - now) : 0L;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

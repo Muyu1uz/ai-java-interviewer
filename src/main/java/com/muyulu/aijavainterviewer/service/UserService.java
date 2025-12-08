@@ -28,6 +28,12 @@ public interface UserService extends IService<User> {
     public UserLoginVo login(UserLoginDto userDto, HttpServletRequest request);
 
     /**
+     * 用户退出登录
+     * @param request
+     */
+    void logout(HttpServletRequest request);
+
+    /**
      * 获取当前登录用户
      * @param request
      * @return

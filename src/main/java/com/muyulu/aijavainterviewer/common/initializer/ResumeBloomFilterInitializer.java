@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.service.initializer;
+package com.muyulu.aijavainterviewer.common.initializer;
 
 import com.google.common.hash.BloomFilter;
 import com.muyulu.aijavainterviewer.mapper.ResumeMapper;

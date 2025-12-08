@@ -1,4 +1,4 @@
-package com.muyulu.aijavainterviewer.service.initializer;
+package com.muyulu.aijavainterviewer.common.initializer;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
