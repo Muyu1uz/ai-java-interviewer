@@ -69,4 +69,10 @@ public class InterviewChatController {
         
         return interviewChatService.generateQuestionPool(request, resumeFile, questionCount);
     }
+
+    @PostMapping("/preload-pool")
+    @RequireLogin
+    public QuestionPoolVO preloadQuestionPool(HttpServletRequest request) {
+        return interviewChatService.preloadQuestionPool(request);
+    }
 }

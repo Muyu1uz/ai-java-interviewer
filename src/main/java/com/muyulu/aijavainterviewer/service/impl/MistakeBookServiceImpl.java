@@ -9,6 +9,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import com.muyulu.aijavainterviewer.common.constant.RedisKeyConstant;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -28,14 +29,14 @@ public class MistakeBookServiceImpl implements MistakeBookService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    private static final String MISTAKE_BOOK_IDEMPOTENT_PREFIX = "mistake_book:idempotent:";
+    // Redis key常量已迁移到RedisKeyConstant接口
     private static final long IDEMPOTENT_EXPIRE_TIME = 5; // 5分钟过期
 
     @Override
     public void insertQuestion(Long userId, String questionContent) {
         // 生成幂等性key: userId + questionContent的MD5
         String contentMd5 = DigestUtils.md5DigestAsHex(questionContent.getBytes());
-        String idempotencyKey = MISTAKE_BOOK_IDEMPOTENT_PREFIX + userId + ":" + contentMd5;
+        String idempotencyKey = RedisKeyConstant.MISTAKE_BOOK_IDEMPOTENT_PREFIX + userId + ":" + contentMd5;
 
         // 尝试设置Redis key,如果已存在则返回false
         Boolean success = redisTemplate.opsForValue()

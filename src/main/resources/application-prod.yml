@@ -5,7 +5,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://111.231.74.153:5432/aiinterview
     username: postgres
-    password: postgres
+    password: miaoyalei111
   ai:
     dashscope:
       api-key: sk-ed29ac72f9bc448e9a749520868860d7

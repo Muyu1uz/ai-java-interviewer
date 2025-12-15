@@ -31,5 +31,12 @@ public interface InterviewChatService extends IService<InterviewChat> {
     QuestionPoolVO generateQuestionPool(HttpServletRequest request, 
                                        MultipartFile resumeFile, 
                                        Integer questionCount);
+
+    /**
+     * 预加载面试问题池
+     * @param request
+     * @return
+     */
+    QuestionPoolVO preloadQuestionPool(HttpServletRequest request);
 }
 

@@ -3,6 +3,7 @@ package com.muyulu.aijavainterviewer.service.impl;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.muyulu.aijavainterviewer.assistant.InterViewAssistant;
+import com.muyulu.aijavainterviewer.common.constant.RedisKeyConstant;
 import com.muyulu.aijavainterviewer.graph.InterviewGraphState;
 import com.muyulu.aijavainterviewer.mapper.InterviewChatMapper;
 import com.muyulu.aijavainterviewer.model.entity.*;
@@ -60,7 +61,7 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         //从redis中获取简历内容
         log.info("========== 开始面试流程 ==========");
         log.info("步骤1: 获取简历内容");
-        String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId());
+        String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId()); // 简历缓存key后续可统一
         if(resumeContent == null){
             //从数据库中读取简历内容
             log.info("Redis中未找到简历，从数据库读取");
@@ -83,7 +84,7 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         log.info("用户 {} 继续面试，输入: {}", loginUser.getId(), userInput);
         
         // 获取简历内容
-        String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId());
+        String resumeContent = redisTemplate.opsForValue().get(loginUser.getResumeId()); // 简历缓存key后续可统一
         if(resumeContent == null){
             Resume resumeFromDB = resumeService.getByResumeId(loginUser.getResumeId());
             resumeContent = JSONUtil.toJsonStr(resumeFromDB);
@@ -117,9 +118,24 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         log.info("========== 问题池生成完成, 共 {} 道题 ==========", questionPool.getTotalCount());
         
         // 转换为 VO
-        return convertToVO(questionPool);
+        QuestionPoolVO questionPoolVO = convertToVO(questionPool);
+        redisTemplate.opsForValue()
+                .set(RedisKeyConstant.QUESTION_POOL_PREFIX + loginUser.getId() + ":" + loginUser.getResumeId(),
+                        JSONUtil.toJsonStr(questionPoolVO), 3600);
+        return questionPoolVO;
     }
-    
+
+    @Override
+    public QuestionPoolVO preloadQuestionPool(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        String key = RedisKeyConstant.QUESTION_POOL_PREFIX + loginUser.getId() + ":" + loginUser.getResumeId();
+        String poolJson = redisTemplate.opsForValue().get(key);
+        if (poolJson != null) {
+            return JSONUtil.toBean(poolJson, QuestionPoolVO.class);
+        }
+        return null;
+    }
+
     /**
      * 将 QuestionPool 转换为前端展示的 VO
      */
