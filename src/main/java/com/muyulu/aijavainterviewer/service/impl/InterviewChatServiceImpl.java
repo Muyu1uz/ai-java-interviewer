@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -121,7 +122,8 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         QuestionPoolVO questionPoolVO = convertToVO(questionPool);
         redisTemplate.opsForValue()
                 .set(RedisKeyConstant.QUESTION_POOL_PREFIX + loginUser.getId() + ":" + loginUser.getResumeId(),
-                        JSONUtil.toJsonStr(questionPoolVO), 3600);
+                        JSONUtil.toJsonStr(questionPoolVO), 1, TimeUnit.HOURS);
+        log.info("问题池已缓存至 Redis，Key: {}", RedisKeyConstant.QUESTION_POOL_PREFIX + loginUser.getId() + ":" + loginUser.getResumeId());
         return questionPoolVO;
     }
 
@@ -131,8 +133,10 @@ public class InterviewChatServiceImpl extends ServiceImpl<InterviewChatMapper, I
         String key = RedisKeyConstant.QUESTION_POOL_PREFIX + loginUser.getId() + ":" + loginUser.getResumeId();
         String poolJson = redisTemplate.opsForValue().get(key);
         if (poolJson != null) {
+            log.info("预加载问题池成功，Redis Key: {}, 内容: {}", key, poolJson);
             return JSONUtil.toBean(poolJson, QuestionPoolVO.class);
         }
+        log.info("预加载问题池失败");
         return null;
     }
 
