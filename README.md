@@ -20,9 +20,27 @@
 *   **ORM**: MyBatis-Plus 3.5.14
 *   **AI**: Spring AI Alibaba (集成 DashScope/通义千问)
 *   **Database**: PostgreSQL (支持 pgvector 插件)
-*   **Cache**: Redis
+*   **Cache**: Redis、Redission
 *   **Utils**: Hutool
 
+
+## 🤖 AI 助手介绍
+
+本项目集成了两个核心 AI 助手，分别负责面试交互和简历处理：
+
+### 1. InterViewAssistant (面试官助手)
+*   **角色**: 充当一位经验丰富的 Java 技术面试官。
+*   **核心能力**:
+    *   **上下文记忆**: 基于 `MessageWindowChatMemory` 维护最近 50 条对话记录，确保面试过程的连贯性，能追问和引用之前的回答。
+    *   **RAG 增强**: 结合 `RagService`，在生成问题或评价时检索本地向量数据库中的 Java 知识点，确保内容的准确性和专业深度。
+    *   **智能交互**: 使用 `ChatClient` 进行流式对话，提供低延迟的实时交互体验。
+
+### 2. ResumeAgent (简历分析专家)
+*   **角色**: 专业的简历分析与结构化提取专家。
+*   **核心能力**:
+    *   **ReAct 模式**: 基于 Spring AI Alibaba 的 `ReactAgent` 构建，具备更强的推理和任务执行能力。
+    *   **结构化提取**: 能够从非结构化的简历文本（PDF/Markdown 解析后的文本）中，精确提取出“专业知识”、“项目经验”、“实习经验”等关键信息。
+    *   **JSON 输出**: 严格遵循 JSON Schema 输出标准化的数据，便于后续系统根据简历内容生成定制化的面试题库。
 
 ## 🚀 快速开始
 
@@ -56,6 +74,15 @@
     或者在 IDE 中运行 `AiJavaInterviewerApplication` 类。
     后端默认运行在端口 `8123`。
     API 文档地址: http://localhost:8123/api/doc.html
+
+### 4. 系统界面
+<img width="2520" height="1334" alt="image" src="https://github.com/user-attachments/assets/f41b391d-4132-4fc0-8e88-95c951ad6661" />
+<img width="2546" height="1311" alt="image" src="https://github.com/user-attachments/assets/51727e45-54b6-469c-9c72-8e4f7b07ccb2" />
+<img width="2479" height="1245" alt="image" src="https://github.com/user-attachments/assets/24d9389b-2cbb-4e62-a63e-6dd53c953a2e" />
+<img width="2513" height="1317" alt="image" src="https://github.com/user-attachments/assets/5adb7dd1-8762-48e9-a844-60591d6e7ffe" />
+<img width="2520" height="1318" alt="image" src="https://github.com/user-attachments/assets/0b3e97aa-5a05-4f3d-9502-37c7202d365f" />
+<img width="2511" height="1332" alt="image" src="https://github.com/user-attachments/assets/3f39c665-9e46-41f6-81c4-9aa887300604" />
+<img width="2491" height="1302" alt="image" src="https://github.com/user-attachments/assets/fa0b1bd2-5ce3-4d04-952b-010f0f44184b" />
 
 
 ## 📂 项目结构
