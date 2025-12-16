@@ -1,5 +1,6 @@
 package com.muyulu.aijavainterviewer.model.dto;
 
+
 import jakarta.validation.constraints.NotBlank;
 
 public record UserDto(

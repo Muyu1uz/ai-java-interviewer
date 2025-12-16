@@ -102,9 +102,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return requestURI.startsWith("/api/v3/api-docs") ||
                requestURI.startsWith("/api/swagger-ui") ||
                requestURI.equals("/api/swagger-ui.html") ||
+               requestURI.equals("/api/doc.html") ||
                requestURI.startsWith("/swagger-ui") ||
                requestURI.startsWith("/v3/api-docs") ||
                requestURI.equals("/swagger-ui.html") ||
+               requestURI.equals("/doc.html") ||
                requestURI.startsWith("/swagger-resources") ||
                requestURI.startsWith("/webjars/");
     }

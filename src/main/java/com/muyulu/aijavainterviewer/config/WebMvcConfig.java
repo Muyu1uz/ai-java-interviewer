@@ -26,7 +26,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/swagger-ui/**",       // Swagger 文档不拦截
                         "/v3/api-docs/**",      // API 文档不拦截
                         "/doc.html",            // Knife4j 文档不拦截
-                        "/swagger-ui.html"      // Swagger UI 不拦截
+                        "/swagger-ui.html",      // Swagger UI 不拦截
+                        "/webjars/**",          // Knife4j 静态资源
+                        "/swagger-resources/**" // Swagger 资源
                 );
     }
 }
