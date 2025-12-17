@@ -1,5 +1,6 @@
 package com.muyulu.aijavainterviewer.common.initializer;
 
+import com.muyulu.aijavainterviewer.common.component.DocumentKeywordExtractor;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ import java.util.List;
 public class DocumentVectorStoreInitializer {
 
     private final VectorStore vectorStore;
+    private final DocumentKeywordExtractor keywordExtractor;
 
     @Value("${rag.document.auto-load:true}")
     private boolean autoLoad;
@@ -39,6 +41,9 @@ public class DocumentVectorStoreInitializer {
 
     @Value("${rag.document.chunk-overlap:200}")
     private int chunkOverlap;
+
+    @Value("${rag.document.ai-keywords:false}")
+    private boolean useAiKeywords;
 
     @PostConstruct
     public void initVectorStore() {
@@ -71,8 +76,8 @@ public class DocumentVectorStoreInitializer {
                 return;
             }
             
-            // 2. 配置文本分割器 (减小chunk大小,避免单个文档过长)
-            TokenTextSplitter textSplitter = new TokenTextSplitter(400, 100, 5, 10000, true);
+            // 2. 配置文本分割器 (作为后备方案,用于分割超长段落)
+            TokenTextSplitter textSplitter = new TokenTextSplitter(chunkSize, chunkOverlap, 5, 10000, true);
             
             // 3. 批量加载文档
             List<Document> allDocuments = new ArrayList<>();
@@ -94,8 +99,19 @@ public class DocumentVectorStoreInitializer {
                     MarkdownDocumentReader reader = new MarkdownDocumentReader(resource, config);
                     List<Document> documents = reader.get();
                     
-                    // 5. 文本分割 (将长文档切分成小块)
-                    List<Document> splitDocuments = textSplitter.apply(documents);
+                    // 5. 文本分割 (优先使用标题语义分割, 如果片段过长则使用Token分割)
+                    List<Document> splitDocuments = splitDocumentsByHeaders(documents);
+                    
+                    // 检查分割后的片段是否过大,如果是则再次进行Token分割
+                    List<Document> finalDocuments = new ArrayList<>();
+                    for (Document doc : splitDocuments) {
+                        if (doc.getFormattedContent().length() > chunkSize * 4) { // 粗略估算,字符数 > chunk * 4
+                            finalDocuments.addAll(textSplitter.apply(List.of(doc)));
+                        } else {
+                            finalDocuments.add(doc);
+                        }
+                    }
+                    splitDocuments = finalDocuments;
                     
                     // 6. 添加元数据
                     for (Document doc : splitDocuments) {
@@ -103,6 +119,15 @@ public class DocumentVectorStoreInitializer {
                         doc.getMetadata().put("type", "interview_knowledge");
                         doc.getMetadata().put("category", extractCategory(filename));
                         doc.getMetadata().put("load_time", System.currentTimeMillis());
+                        
+                        // 使用 AI 提取关键词 (如果开启)
+                        if (useAiKeywords) {
+                            String keywords = keywordExtractor.extractKeywords(doc.getFormattedContent());
+                            if (org.springframework.util.StringUtils.hasText(keywords)) {
+                                doc.getMetadata().put("keywords", keywords);
+                                log.debug("  + 关键词: {}", keywords);
+                            }
+                        }
                     }
                     
                     allDocuments.addAll(splitDocuments);
@@ -200,18 +225,125 @@ public class DocumentVectorStoreInitializer {
     }
 
     /**
+     * 根据 Markdown 标题进行语义分割
+     * 保持 H1/H2/H3 下的内容作为一个完整的 Document
+     */
+    private List<Document> splitDocumentsByHeaders(List<Document> documents) {
+        List<Document> result = new ArrayList<>();
+        
+        for (Document doc : documents) {
+            String content = doc.getFormattedContent();
+            String[] lines = content.split("\n");
+            
+            StringBuilder currentChunk = new StringBuilder();
+            String currentHeader = ""; // 记录当前最近的标题
+            boolean inCodeBlock = false;
+            
+            for (String line : lines) {
+                // 检查是否进入/离开代码块
+                if (line.trim().startsWith("```")) {
+                    inCodeBlock = !inCodeBlock;
+                }
+                
+                // 检查是否是标题 (且不在代码块中)
+                // 匹配 #, ##, ### 等开头
+                boolean isHeader = !inCodeBlock && line.trim().matches("^#{1,6}\\s+.*");
+                
+                if (isHeader) {
+                    // 如果之前有内容, 保存之前的块
+                    if (currentChunk.length() > 0) {
+                        Document newDoc = new Document(currentChunk.toString(), new java.util.HashMap<>(doc.getMetadata()));
+                        // 添加当前块所属的标题上下文(上一个标题)
+                        newDoc.getMetadata().put("section_title", currentHeader.isEmpty() ? "Introduction" : currentHeader);
+                        result.add(newDoc);
+                        currentChunk = new StringBuilder();
+                    }
+                    // 更新当前标题(去掉#号和空格)
+                    currentHeader = line.trim().replaceAll("^#+\\s+", "");
+                }
+                
+                currentChunk.append(line).append("\n");
+            }
+            
+            // 添加最后一个块
+            if (currentChunk.length() > 0) {
+                Document newDoc = new Document(currentChunk.toString(), new java.util.HashMap<>(doc.getMetadata()));
+                newDoc.getMetadata().put("section_title", currentHeader.isEmpty() ? "Introduction" : currentHeader);
+                result.add(newDoc);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
      * 从文件名提取分类
      */
     private String extractCategory(String filename) {
         if (filename == null) return "unknown";
         
         String lower = filename.toLowerCase();
-        if (lower.contains("java") || lower.contains("jvm")) return "Java";
-        if (lower.contains("spring")) return "Spring";
-        if (lower.contains("database") || lower.contains("mysql") || lower.contains("redis")) return "Database";
-        if (lower.contains("network")) return "Network";
-        if (lower.contains("algorithm")) return "Algorithm";
-        if (lower.contains("concurrent") || lower.contains("thread")) return "Concurrency";
+        
+        // Java Core
+        if (lower.contains("java") || lower.contains("jvm") || lower.contains("jdk") || 
+            lower.contains("gc") || lower.contains("classloader") || lower.contains("reflection") ||
+            lower.contains("spi") || lower.contains("generics") || lower.contains("unsafe")) {
+            return "Java Core";
+        }
+        
+        // Concurrency
+        if (lower.contains("concurrent") || lower.contains("thread") || lower.contains("lock") ||
+            lower.contains("atomic") || lower.contains("aqs") || lower.contains("cas") ||
+            lower.contains("future") || lower.contains("blockingqueue")) {
+            return "Concurrency";
+        }
+        
+        // Spring Ecosystem
+        if (lower.contains("spring") || lower.contains("bean") || lower.contains("aop") || 
+            lower.contains("ioc") || lower.contains("transaction") || lower.contains("mvc")) {
+            return "Spring";
+        }
+        
+        // Database & Storage
+        if (lower.contains("mysql") || lower.contains("sql") || lower.contains("innodb") || 
+            lower.contains("transaction") || lower.contains("index") || lower.contains("log") ||
+            lower.contains("mybatis")) {
+            return "Database";
+        }
+        
+        // Redis / Cache
+        if (lower.contains("redis") || lower.contains("cache") || lower.contains("bloom")) {
+            return "Redis";
+        }
+        
+        // Network
+        if (lower.contains("http") || lower.contains("tcp") || lower.contains("udp") || 
+            lower.contains("network") || lower.contains("ip") || lower.contains("socket") ||
+            lower.contains("dns") || lower.contains("cdn") || lower.contains("arp")) {
+            return "Network";
+        }
+        
+        // Data Structures & Algorithms
+        if (lower.contains("algorithm") || lower.contains("structure") || lower.contains("tree") || 
+            lower.contains("list") || lower.contains("map") || lower.contains("queue") || 
+            lower.contains("stack") || lower.contains("sort") || lower.contains("heap") ||
+            lower.contains("offer") || lower.contains("leetcode")) {
+            return "Algorithm";
+        }
+        
+        // System Design / Architecture
+        if (lower.contains("design") || lower.contains("distributed") || lower.contains("microservice") ||
+            lower.contains("load-balancing") || lower.contains("circuit-breaker") || lower.contains("limit") ||
+            lower.contains("idempotency") || lower.contains("high-availability")) {
+            return "System Design";
+        }
+
+        // Tools / OS / Others
+        if (lower.contains("linux") || lower.contains("shell") || lower.contains("os") || 
+            lower.contains("operating") || lower.contains("docker") || lower.contains("k8s") ||
+            lower.contains("git") || lower.contains("maven")) {
+            return "DevOps";
+        }
         
         return "General";
     }

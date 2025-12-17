@@ -88,6 +88,7 @@ rag:
     use-ai: true                 # 是否使用 AI 提取关键词（false 则使用正则表达式）
     max-input-length: 1500       # AI 提取时的最大输入长度（字符数，增加以包含更多上下文）
   document:
+    ai-keywords: false            # [新增] 加载文档时是否使用AI提取关键词并写入元数据 (注意: 会增加启动时间)
     auto-load: true              # 启动时自动加载文档到向量库
     force-reload: false          # 是否强制重新加载（即使向量库已有数据）
     chunk-size: 400              # 文档分块大小（tokens，推荐 400-800）
